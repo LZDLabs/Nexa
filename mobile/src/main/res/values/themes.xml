@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Nexa" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/nexa_obsidian</item>
+        <item name="android:statusBarColor">@color/nexa_obsidian</item>
+        <item name="android:navigationBarColor">@color/nexa_obsidian</item>
+    </style>
+    <color name="nexa_obsidian">#FF09080D</color>
+    <color name="nexa_plum">#FF161124</color>
+</resources>
