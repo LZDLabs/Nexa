@@ -51,7 +51,7 @@ fun rememberSessionStarter(): (LaunchableApp) -> Unit {
     }
 
     fun requestProjection() {
-        val mpm = context.getSystemService(MediaProjectionManager::class.java)
+        val mpm = requireNotNull(context.getSystemService(MediaProjectionManager::class.java))
         projectionLauncher.launch(mpm.createScreenCaptureIntent())
     }
 

@@ -20,7 +20,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
  * Needs the user-granted "Display over other apps" permission.
  */
 class ControllerOverlay(private val context: Context) {
-    private val windowManager = context.getSystemService(WindowManager::class.java)
+    private val windowManager = requireNotNull(context.getSystemService(WindowManager::class.java))
     private var view: ComposeView? = null
     private var owner: OverlayOwner? = null
 

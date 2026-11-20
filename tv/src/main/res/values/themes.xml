@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.NexaTv" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/nexa_obsidian</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+    <color name="nexa_obsidian">#FF09080D</color>
+</resources>

@@ -19,6 +19,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.util.Log
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +37,7 @@ import com.nexa.mobile.nexa
 import com.nexa.protocol.MessageType
 import com.nexa.protocol.SessionStart
 import com.nexa.ui.NexaTheme
+import java.util.concurrent.Executors
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -47,9 +49,11 @@ import kotlin.math.roundToInt
 class StreamingService : Service() {
 
     private val main = Handler(Looper.getMainLooper())
+    /** All socket writes and codec setup/teardown run here: Android forbids network I/O on the main thread. */
+    private val worker = Executors.newSingleThreadExecutor()
     private var projection: MediaProjection? = null
-    private var video: VideoEncoder? = null
-    private var audio: AudioCapturer? = null
+    @Volatile private var video: VideoEncoder? = null
+    @Volatile private var audio: AudioCapturer? = null
     private var overlay: ControllerOverlay? = null
     private var stopping = false
 
@@ -77,8 +81,8 @@ class StreamingService : Service() {
             startSession(resultCode, data, pkg, label)
         } catch (e: Exception) {
             Log.e(TAG, "Could not start session", e)
-            app.link.setStatus(TvLink.State.Failed("Falha ao iniciar a captura: ${e.message}"))
             stopSession(notifyTv = true)
+            Toast.makeText(this, "Falha ao iniciar a captura: ${e.message}", Toast.LENGTH_LONG).show()
         }
         return START_NOT_STICKY
     }
@@ -86,7 +90,7 @@ class StreamingService : Service() {
     private fun startSession(resultCode: Int, data: Intent, pkg: String, label: String) {
         stopping = false
         val app = nexa
-        val mpm = getSystemService(MediaProjectionManager::class.java)
+        val mpm = requireNotNull(getSystemService(MediaProjectionManager::class.java))
         val mp = mpm.getMediaProjection(resultCode, data) ?: error("MediaProjection recusada")
         // Android 14+ requires the callback before createVirtualDisplay().
         mp.registerCallback(object : MediaProjection.Callback() {
@@ -96,12 +100,22 @@ class StreamingService : Service() {
 
         val settings = app.settings.state.value
         val (w, h) = captureSize(settings.quality.longEdge)
-        app.link.send(MessageType.SESSION_START, SessionStart(label).encode())
-
-        video = VideoEncoder(mp, w, h, resources.displayMetrics.densityDpi, settings.quality.bitrate, app.link).also { it.start() }
+        val dpi = resources.displayMetrics.densityDpi
         val canRecord = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        if (settings.audioEnabled && canRecord) {
-            audio = AudioCapturer(mp, app.link).takeIf { it.start() }
+        worker.execute {
+            try {
+                app.link.send(MessageType.SESSION_START, SessionStart(label).encode())
+                video = VideoEncoder(mp, w, h, dpi, settings.quality.bitrate, app.link).also { it.start() }
+                if (settings.audioEnabled && canRecord) {
+                    audio = AudioCapturer(mp, app.link).takeIf { it.start() }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Could not start capture", e)
+                main.post {
+                    stopSession(notifyTv = true)
+                    Toast.makeText(this, "Falha ao iniciar a captura: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
         }
 
         app.link.listener = object : TvLink.Listener {
@@ -148,7 +162,7 @@ class StreamingService : Service() {
 
     /** Landscape capture size, aligned to 16 px, long edge capped by the quality setting. */
     private fun captureSize(maxLongEdge: Int): Pair<Int, Int> {
-        val wm = getSystemService(WindowManager::class.java)
+        val wm = requireNotNull(getSystemService(WindowManager::class.java))
         val (sw, sh) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             wm.maximumWindowMetrics.bounds.let { it.width() to it.height() }
         } else {
@@ -168,12 +182,16 @@ class StreamingService : Service() {
         stopping = true
         val app = nexa
         app.link.listener = null
-        audio?.stop(); audio = null
-        video?.stop(); video = null
         overlay?.hide(); overlay = null
-        projection?.let { runCatching { it.stop() } }
+        val mp = projection
         projection = null
-        if (notifyTv) app.link.sendAsync(MessageType.SESSION_END)
+        // Runs after any pending start on the same worker, so nothing is left half-started.
+        worker.execute {
+            audio?.stop(); audio = null
+            video?.stop(); video = null
+            mp?.let { runCatching { it.stop() } }
+            if (notifyTv) app.link.send(MessageType.SESSION_END)
+        }
         val wasRunning = app.session.value != null
         app.session.value = null
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -188,11 +206,12 @@ class StreamingService : Service() {
 
     override fun onDestroy() {
         stopSession(notifyTv = true)
+        worker.shutdown() // already-queued teardown still runs
         super.onDestroy()
     }
 
     private fun startInForeground() {
-        val nm = getSystemService(NotificationManager::class.java)
+        val nm = requireNotNull(getSystemService(NotificationManager::class.java))
         nm.createNotificationChannel(NotificationChannel(CHANNEL, "Transmissão NEXA", NotificationManager.IMPORTANCE_LOW))
         val stopIntent = PendingIntent.getService(
             this, 1, Intent(this, StreamingService::class.java).setAction(ACTION_STOP),

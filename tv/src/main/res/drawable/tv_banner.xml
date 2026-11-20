@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 320x180 Android TV launcher banner: NEXA mark + wordmark on obsidian -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp" android:height="180dp"
+    android:viewportWidth="320" android:viewportHeight="180">
+    <path android:pathData="M0,0 H320 V180 H0 Z" android:fillColor="#09080D" />
+    <group android:translateX="44" android:translateY="54" android:scaleX="1.5" android:scaleY="1.5">
+        <path android:pathData="M13,2 h22 a11,11 0 0 1 11,11 v22 a11,11 0 0 1 -11,11 h-22 a11,11 0 0 1 -11,-11 v-22 a11,11 0 0 1 11,-11 z"
+            android:fillColor="#161124" android:strokeColor="#7C3AED" android:strokeWidth="2" />
+        <path android:pathData="M14,34 V14 L27,28.5 V14" android:strokeColor="#F8FAFC" android:strokeWidth="3.2"
+            android:strokeLineCap="round" android:strokeLineJoin="round" />
+        <path android:pathData="M34,14 V34" android:strokeColor="#8B5CF6" android:strokeWidth="3.2" android:strokeLineCap="round" />
+    </group>
+    <!-- "NEXA" wordmark drawn with strokes -->
+    <group android:translateX="136" android:translateY="68">
+        <path android:pathData="M2,44 V2 L26,44 V2" android:strokeColor="#F8FAFC" android:strokeWidth="6"
+            android:strokeLineCap="round" android:strokeLineJoin="round" />
+        <path android:pathData="M64,2 H40 V44 H64 M40,23 H60" android:strokeColor="#F8FAFC" android:strokeWidth="6"
+            android:strokeLineCap="round" android:strokeLineJoin="round" />
+        <path android:pathData="M78,2 L104,44 M104,2 L78,44" android:strokeColor="#F8FAFC" android:strokeWidth="6"
+            android:strokeLineCap="round" />
+        <path android:pathData="M118,44 L132,2 L146,44 M123,30 H141" android:strokeColor="#8B5CF6" android:strokeWidth="6"
+            android:strokeLineCap="round" android:strokeLineJoin="round" />
+    </group>
+</vector>

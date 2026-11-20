@@ -14,7 +14,7 @@ import kotlin.coroutines.resume
  * The TV only advertises "NEXA TV" + port; the code itself is never broadcast.
  */
 class TvDiscovery(context: Context) {
-    private val nsd = context.getSystemService(NsdManager::class.java)
+    private val nsd = requireNotNull(context.getSystemService(NsdManager::class.java))
 
     data class Candidate(val name: String, val host: String, val port: Int)
 
